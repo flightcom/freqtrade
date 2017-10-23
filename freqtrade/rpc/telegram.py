@@ -316,7 +316,7 @@ def _count(bot: Bot, update: Update) -> None:
         send_msg('`trader is not running`', bot=bot)
         return
 
-    trades = Trade.query.order_by(Trade.id).all()
+    trades = Trade.query.filter(Trade.is_open.is_(True)).all()
 
     current_trades_count = len(trades)
     max_trades_count = _CONF['max_open_trades']

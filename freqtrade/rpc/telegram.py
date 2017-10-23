@@ -321,7 +321,7 @@ def _count(bot: Bot, update: Update) -> None:
     current_trades_count = len(trades)
     max_trades_count = _CONF['max_open_trades']
 
-    message = '<b>Count:</b> current/max\n{}/{}\n'.format(current_trades_count, max_trades_count)
+    message = '<b>Count:</b>\ncurrent/max\n{}/{}\n'.format(current_trades_count, max_trades_count)
     logger.debug(message)
     send_msg(message, parse_mode=ParseMode.HTML)
 

@@ -1,6 +1,7 @@
 import logging
 from datetime import timedelta
 from typing import Callable, Any
+from tabulate import tabulate
 
 import arrow
 from sqlalchemy import and_, func, text

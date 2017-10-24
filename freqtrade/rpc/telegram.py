@@ -40,6 +40,7 @@ def init(config: dict) -> None:
     # Register command handler and start telegram message polling
     handles = [
         CommandHandler('status', _status),
+        CommandHandler('statut', _statut),
         CommandHandler('profit', _profit),
         CommandHandler('start', _start),
         CommandHandler('stop', _stop),
@@ -135,6 +136,57 @@ def _status(bot: Bot, update: Update) -> None:
                 open_order='{} ({})'.format(order['remaining'], order['type']) if order else None,
             )
             send_msg(message, bot=bot)
+
+
+@authorized_only
+def _statut(bot: Bot, update: Update) -> None:
+    """
+    Handler for /status.
+    Returns the current TradeThread status
+    :param bot: telegram bot
+    :param update: message update
+    :return: None
+    """
+    # Fetch open trade
+    trades = Trade.query.filter(Trade.is_open.is_(True)).all()
+    if get_state() != State.RUNNING:
+        send_msg('*Status:* `trader is not running`', bot=bot)
+    elif not trades:
+        send_msg('*Status:* `no active order`', bot=bot)
+    else:
+        trades_list = []
+        for trade in trades:
+            # calculate profit and send message to user
+            current_rate = exchange.get_ticker(trade.pair)['bid']
+            current_profit = 100 * ((current_rate - trade.open_rate) / trade.open_rate)
+            orders = exchange.get_open_orders(trade.pair)
+            orders = [o for o in orders if o['id'] == trade.open_order_id]
+            order = orders[0] if orders else None
+
+            fmt_close_profit = '{:.2f}%'.format(
+                round(trade.close_profit, 2)
+            ) if trade.close_profit else None
+
+            row = [
+                trade.id,
+                '[{}]({})'.format(trade.pair, exchange.get_pair_detail_url(trade.pair)),
+                arrow.get(trade.open_date).humanize(),
+                round(trade.amount, 8),
+                trade.open_rate,
+                trade.close_rate,
+                current_rate,
+                fmt_close_profit,
+                round(current_profit, 2),
+                '{} ({})'.format(order['remaining'], order['type']) if order else None
+            ]
+
+            trades_list.append(row)
+
+        header = ['Trade ID', 'Current Pair', 'Open Since', 'Amount', 'Open Rate',
+            'Close Rate', 'Current Rate', 'Close Profit', 'Current Profit',
+            'Open Order']
+        message = tabulate(trades_list, headers=headers, tablefmt='grid')
+        send_msg(message, bot=bot)
 
 
 @authorized_only

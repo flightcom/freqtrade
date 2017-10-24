@@ -183,7 +183,6 @@ def _statut(bot: Bot, update: Update) -> None:
             ]
 
             row_short = [
-                trade.id,
                 trade.pair,
                 arrow.get(trade.open_date).humanize()
                     .replace('ago', '')
@@ -191,6 +190,8 @@ def _statut(bot: Bot, update: Update) -> None:
                     .replace('minutes', 'm')
                     .replace('hours', 'h')
                     .replace('days', 'd')
+                    .replace('an', '1')
+                    .replace('a', '1')
                     .replace(' ', ''),
                 round(trade.open_rate, 5),
                 round(current_profit, 2)
@@ -209,7 +210,8 @@ def _statut(bot: Bot, update: Update) -> None:
         header = header_short
 
         df = DataFrame.from_records(trades_list, columns=header)
-        df = df.set_index('Pair')
+        # df = df.set_index(header[0])
+        # df.index.name = header[0]
 
         message = tabulate(df, headers='keys', tablefmt='simple')
         logger.info(message)

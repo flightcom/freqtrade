@@ -2,6 +2,7 @@ import logging
 from datetime import timedelta
 from typing import Callable, Any
 from tabulate import tabulate
+from pandas import DataFrame
 
 import arrow
 from sqlalchemy import and_, func, text
@@ -168,7 +169,7 @@ def _statut(bot: Bot, update: Update) -> None:
                 round(trade.close_profit, 2)
             ) if trade.close_profit else None
 
-            row = [
+            row_long = [
                 trade.id,
                 '[{}]({})'.format(trade.pair, exchange.get_pair_detail_url(trade.pair)),
                 arrow.get(trade.open_date).humanize(),
@@ -181,14 +182,39 @@ def _statut(bot: Bot, update: Update) -> None:
                 '{} ({})'.format(order['remaining'], order['type']) if order else None
             ]
 
+            row_short = [
+                trade.id,
+                trade.pair,
+                arrow.get(trade.open_date).humanize()
+                    .replace('ago', '')
+                    .replace('seconds', 's')
+                    .replace('minutes', 'm')
+                    .replace('hours', 'h')
+                    .replace('days', 'd')
+                    .replace(' ', ''),
+                round(trade.open_rate, 5),
+                round(current_profit, 2)
+            ]
+
+            row = row_short
+
             trades_list.append(row)
 
-        header = ['Trade ID', 'Current Pair', 'Open Since', 'Amount', 'Open Rate',
+        header_long = ['Trade ID', 'Pair', 'Open Since', 'Amount', 'Open Rate',
             'Close Rate', 'Current Rate', 'Close Profit', 'Current Profit',
             'Open Order']
-        message = tabulate(trades_list, headers=headers, tablefmt='grid')
-        send_msg(message, bot=bot)
 
+        header_short = ['Pair', 'Since', 'Op. Rate', 'Profit']
+
+        header = header_short
+
+        df = DataFrame.from_records(trades_list, columns=header)
+        df = df.set_index('Pair')
+
+        message = tabulate(df, headers='keys', tablefmt='simple')
+        logger.info(message)
+
+        send_msg("""```{}```""".format(message), bot=bot)
 
 @authorized_only
 def _profit(bot: Bot, update: Update) -> None:

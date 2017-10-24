@@ -1,6 +1,8 @@
 import logging
 from datetime import timedelta
 from typing import Callable, Any
+from tabulate import tabulate
+from pandas import DataFrame
 
 import arrow
 from sqlalchemy import and_, func, text
@@ -40,11 +42,13 @@ def init(config: dict) -> None:
     # Register command handler and start telegram message polling
     handles = [
         CommandHandler('status', _status),
+        CommandHandler('statut', _statut),
         CommandHandler('profit', _profit),
         CommandHandler('start', _start),
         CommandHandler('stop', _stop),
         CommandHandler('forcesell', _forcesell),
         CommandHandler('performance', _performance),
+        CommandHandler('count', _count),
         CommandHandler('help', _help),
     ]
     for handle in handles:
@@ -135,6 +139,87 @@ def _status(bot: Bot, update: Update) -> None:
             )
             send_msg(message, bot=bot)
 
+
+@authorized_only
+def _statut(bot: Bot, update: Update) -> None:
+    """
+    Handler for /status.
+    Returns the current TradeThread status
+    :param bot: telegram bot
+    :param update: message update
+    :return: None
+    """
+    # Fetch open trade
+    trades = Trade.query.filter(Trade.is_open.is_(True)).all()
+    if get_state() != State.RUNNING:
+        send_msg('*Status:* `trader is not running`', bot=bot)
+    elif not trades:
+        send_msg('*Status:* `no active order`', bot=bot)
+    else:
+        trades_list = []
+        for trade in trades:
+            # calculate profit and send message to user
+            current_rate = exchange.get_ticker(trade.pair)['bid']
+            current_profit = 100 * ((current_rate - trade.open_rate) / trade.open_rate)
+            orders = exchange.get_open_orders(trade.pair)
+            orders = [o for o in orders if o['id'] == trade.open_order_id]
+            order = orders[0] if orders else None
+
+            fmt_close_profit = '{:.2f}%'.format(
+                round(trade.close_profit, 2)
+            ) if trade.close_profit else None
+
+            row_long = [
+                trade.id,
+                '[{}]({})'.format(trade.pair, exchange.get_pair_detail_url(trade.pair)),
+                arrow.get(trade.open_date).humanize(),
+                round(trade.amount, 8),
+                trade.open_rate,
+                trade.close_rate,
+                current_rate,
+                fmt_close_profit,
+                round(current_profit, 2),
+                '{} ({})'.format(order['remaining'], order['type']) if order else None
+            ]
+
+            row_short = [
+                trade.id,
+                trade.pair,
+                arrow.get(trade.open_date).humanize()
+                    .replace('ago', '')
+                    .replace('seconds', 's')
+                    .replace('minutes', 'm')
+                    .replace('minute', 'm')
+                    .replace('hours', 'h')
+                    .replace('hour', 'h')
+                    .replace('days', 'd')
+                    .replace('day', 'd')
+                    .replace('an', '1')
+                    .replace('a', '1')
+                    .replace(' ', ''),
+                round(trade.open_rate, 5),
+                round(current_profit, 2)
+            ]
+
+            row = row_short
+
+            trades_list.append(row)
+
+        header_long = ['Trade ID', 'Pair', 'Open Since', 'Amount', 'Open Rate',
+            'Close Rate', 'Current Rate', 'Close Profit', 'Current Profit',
+            'Open Order']
+
+        header_short = ['ID', 'Pair', 'Since', 'Op. Rate', 'Profit']
+
+        header = header_short
+
+        df = DataFrame.from_records(trades_list, columns=header)
+        df = df.set_index(header[0])
+
+        message = tabulate(df, headers='keys', tablefmt='simple')
+        logger.info(message)
+
+        send_msg("""```{}```""".format(message), bot=bot)
 
 @authorized_only
 def _profit(bot: Bot, update: Update) -> None:
@@ -298,6 +383,29 @@ def _performance(bot: Bot, update: Update) -> None:
     ) for i, (pair, rate) in enumerate(pair_rates))
 
     message = '<b>Performance:</b>\n{}\n'.format(stats)
+    logger.debug(message)
+    send_msg(message, parse_mode=ParseMode.HTML)
+
+
+@authorized_only
+def _count(bot: Bot, update: Update) -> None:
+    """
+    Handler for /count.
+    Returns the number of trades running
+    :param bot: telegram bot
+    :param update: message update
+    :return: None
+    """
+    if get_state() != State.RUNNING:
+        send_msg('`trader is not running`', bot=bot)
+        return
+
+    trades = Trade.query.filter(Trade.is_open.is_(True)).all()
+
+    current_trades_count = len(trades)
+    max_trades_count = _CONF['max_open_trades']
+
+    message = '<b>Count:</b>\ncurrent/max\n{}/{}\n'.format(current_trades_count, max_trades_count)
     logger.debug(message)
     send_msg(message, parse_mode=ParseMode.HTML)
 

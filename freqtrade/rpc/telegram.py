@@ -188,8 +188,11 @@ def _statut(bot: Bot, update: Update) -> None:
                     .replace('ago', '')
                     .replace('seconds', 's')
                     .replace('minutes', 'm')
+                    .replace('minute', 'm')
                     .replace('hours', 'h')
+                    .replace('hour', 'h')
                     .replace('days', 'd')
+                    .replace('day', 'd')
                     .replace('an', '1')
                     .replace('a', '1')
                     .replace(' ', ''),

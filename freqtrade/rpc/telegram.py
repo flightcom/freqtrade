@@ -183,7 +183,6 @@ def _statut(bot: Bot, update: Update) -> None:
             ]
 
             row_short = [
-                trade.id,
                 trade.pair,
                 arrow.get(trade.open_date).humanize()
                     .replace('ago', '')

@@ -49,6 +49,7 @@ def init(config: dict) -> None:
         CommandHandler('forcesell', _forcesell),
         CommandHandler('performance', _performance),
         CommandHandler('count', _count),
+        CommandHandler('balance', _balance),
         CommandHandler('help', _help),
     ]
     for handle in handles:
@@ -429,6 +430,21 @@ def _help(bot: Bot, update: Update) -> None:
 */help:* `This help message`
     """
     send_msg(message, bot=bot)
+
+
+@authorized_only
+def _balance(bot: Bot, update: Update) -> None:
+    """
+    Handler for /balance.
+    Get balance for the currency the bot is running with
+    :param bot: telegram bot
+    :param update: message update
+    :return: None
+    """
+    currency = _CONF['stake_currency']
+    balance = exchange.get_balance(currency)
+    message = '<b>Balance:</b>\n{} {}\n'.format(balance, currency)
+    send_msg(message, parse_mode=ParseMode.HTML)
 
 
 def send_msg(msg: str, bot: Bot = None, parse_mode: ParseMode = ParseMode.MARKDOWN) -> None:

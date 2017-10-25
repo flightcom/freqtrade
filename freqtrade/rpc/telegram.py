@@ -431,6 +431,21 @@ def _help(bot: Bot, update: Update) -> None:
     send_msg(message, bot=bot)
 
 
+@authorized_only
+def _balance(bot: Bot, update: Update) -> None:
+    """
+    Handler for /balance.
+    Get balance for the currency the bot is running with
+    :param bot: telegram bot
+    :param update: message update
+    :return: None
+    """
+    currency = _CONF['stake_currency']
+    balance = exchange.get_balance(currency)
+    message = '<b>Balance:</b>\n{} {}\n'.format(balance, currency)
+    send_msg(message, bot=bot)
+
+
 def send_msg(msg: str, bot: Bot = None, parse_mode: ParseMode = ParseMode.MARKDOWN) -> None:
     """
     Send given markdown message

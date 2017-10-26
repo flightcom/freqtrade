@@ -183,6 +183,7 @@ def _statut(bot: Bot, update: Update) -> None:
             ]
 
             row_short = [
+                trade.id,
                 trade.pair,
                 arrow.get(trade.open_date).humanize()
                     .replace('ago', '')
@@ -208,13 +209,12 @@ def _statut(bot: Bot, update: Update) -> None:
             'Close Rate', 'Current Rate', 'Close Profit', 'Current Profit',
             'Open Order']
 
-        header_short = ['Pair', 'Since', 'Op. Rate', 'Profit']
+        header_short = ['ID', 'Pair', 'Since', 'Op. Rate', 'Profit']
 
         header = header_short
 
         df = DataFrame.from_records(trades_list, columns=header)
-        # df = df.set_index(header[0])
-        # df.index.name = header[0]
+        df = df.set_index(header[0])
 
         message = tabulate(df, headers='keys', tablefmt='simple')
         logger.info(message)
@@ -428,6 +428,21 @@ def _help(bot: Bot, update: Update) -> None:
 */performance:* `Show performance of each finished trade grouped by pair`
 */help:* `This help message`
     """
+    send_msg(message, bot=bot)
+
+
+@authorized_only
+def _balance(bot: Bot, update: Update) -> None:
+    """
+    Handler for /balance.
+    Get balance for the currency the bot is running with
+    :param bot: telegram bot
+    :param update: message update
+    :return: None
+    """
+    currency = _CONF['stake_currency']
+    balance = exchange.get_balance(currency)
+    message = '<b>Balance:</b>\n{} {}\n'.format(balance, currency)
     send_msg(message, bot=bot)
 
 

@@ -43,6 +43,7 @@ def init(config: dict) -> None:
     # Register command handler and start telegram message polling
     handles = [
         CommandHandler('status', _status),
+        CommandHandler('statut', _status_table),
         CommandHandler('profit', _profit),
         CommandHandler('balance', _balance),
         CommandHandler('start', _start),

@@ -7,6 +7,7 @@ import os
 import pickle
 import signal
 import sys
+import numpy as np
 from functools import reduce
 from math import exp
 from operator import itemgetter
@@ -427,7 +428,8 @@ def optimizer(params):
     })
 
     return {
-        'loss': loss,
+        'loss': trade_loss + profit_loss,
+        'total_profit': total_profit,
         'status': STATUS_OK,
         'result': result_explanation,
     }

@@ -445,6 +445,9 @@ def format_results(results: DataFrame):
                 results.duration.mean() * 5,
             )
 
+def filter_nan(result, filter_key):
+    return [r for r in result if not np.isnan(r[filter_key])]
+
 
 def start(args):
     global TOTAL_TRIES, PROCESSED, TRIALS, _CURRENT_TRIES

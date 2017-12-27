@@ -161,6 +161,9 @@ def format_results(results: DataFrame):
                 results.duration.mean() * 5,
             )
 
+def filter_nan(result, filter_key):
+    return [r for r in result if not np.isnan(r[filter_key])]
+
 
 def buy_strategy_generator(params):
     def populate_buy_trend(dataframe: DataFrame) -> DataFrame:
@@ -237,5 +240,9 @@ def start(args):
     best = fmin(fn=optimizer, space=SPACE, algo=tpe.suggest, max_evals=TOTAL_TRIES, trials=trials)
     logger.info('Best parameters:\n%s', json.dumps(best, indent=4))
 
-    results = sorted(trials.results, key=itemgetter('loss'))
+    filt_res = filter_nan(trials.results, 'total_profit')
+    filt_res = filter_nan(filt_res, 'avg_profit')
+
+    results = sorted(filt_res, key=itemgetter('loss'))
+
     logger.info('Best Result:\n%s', results[0]['result'])

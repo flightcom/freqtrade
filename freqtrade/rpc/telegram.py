@@ -1,12 +1,12 @@
 import logging
 import re
 from decimal import Decimal
-from datetime import timedelta, date, datetime
+from datetime import timedelta, datetime
 from typing import Callable, Any
 
 import arrow
 from pandas import DataFrame
-from sqlalchemy import and_, func, text, between
+from sqlalchemy import and_, func, text
 from tabulate import tabulate
 from telegram import ParseMode, Bot, Update, ReplyKeyboardMarkup
 from telegram.error import NetworkError, TelegramError
@@ -220,29 +220,28 @@ def _daily(bot: Bot, update: Update) -> None:
     :param update: message update
     :return: None
     """
-    today = datetime.utcnow().toordinal()
+    today = datetime.utcnow().date()
     profit_days = {}
 
     try:
         timescale = int(update.message.text.replace('/daily', '').strip())
     except (TypeError, ValueError):
-        timescale = 5
+        timescale = 7
 
     if not (isinstance(timescale, int) and timescale > 0):
         send_msg('*Daily [n]:* `must be an integer greater than 0`', bot=bot)
         return
 
     for day in range(0, timescale):
-        # need to query between day+1 and day-1
-        nextdate = date.fromordinal(today - day + 1)
-        prevdate = date.fromordinal(today - day - 1)
+        profitday = today - timedelta(days=day)
         trades = Trade.query \
             .filter(Trade.is_open.is_(False)) \
-            .filter(between(Trade.close_date, prevdate, nextdate)) \
+            .filter(Trade.close_date >= profitday)\
+            .filter(Trade.close_date < (profitday + timedelta(days=1)))\
             .order_by(Trade.close_date)\
             .all()
         curdayprofit = sum(trade.calc_profit() for trade in trades)
-        profit_days[date.fromordinal(today - day)] = format(curdayprofit, '.8f')
+        profit_days[profitday] = format(curdayprofit, '.8f')
 
     stats = [
         [
@@ -470,17 +469,19 @@ def _performance(bot: Bot, update: Update) -> None:
         send_msg('`trader is not running`', bot=bot)
         return
 
-    pair_rates = Trade.session.query(Trade.pair, func.sum(Trade.close_profit).label('profit_sum')) \
+    pair_rates = Trade.session.query(Trade.pair, func.sum(Trade.close_profit).label('profit_sum'),
+                                     func.count(Trade.pair).label('count')) \
         .filter(Trade.is_open.is_(False)) \
         .group_by(Trade.pair) \
         .order_by(text('profit_sum DESC')) \
         .all()
 
-    stats = '\n'.join('{index}.\t<code>{pair}\t{profit:.2f}%</code>'.format(
+    stats = '\n'.join('{index}.\t<code>{pair}\t{profit:.2f}% ({count})</code>'.format(
         index=i + 1,
         pair=pair,
-        profit=round(rate * 100, 2)
-    ) for i, (pair, rate) in enumerate(pair_rates))
+        profit=round(rate * 100, 2),
+        count=count
+    ) for i, (pair, rate, count) in enumerate(pair_rates))
 
     message = '<b>Performance:</b>\n{}'.format(stats)
     logger.debug(message)

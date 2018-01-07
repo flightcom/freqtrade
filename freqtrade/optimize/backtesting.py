@@ -5,34 +5,32 @@ import logging
 from typing import Tuple, Dict
 
 import arrow
-from pandas import DataFrame
+from pandas import DataFrame, Series
 from tabulate import tabulate
 
 from freqtrade import exchange
 from freqtrade.analyze import populate_buy_trend, populate_sell_trend
 from freqtrade.exchange import Bittrex
 from freqtrade.main import min_roi_reached
-from freqtrade.misc import load_config
-from freqtrade.optimize import load_data, preprocess
+import freqtrade.misc as misc
+from freqtrade.optimize import preprocess
+import freqtrade.optimize as optimize
 from freqtrade.persistence import Trade
 
 logger = logging.getLogger(__name__)
 
 
-def get_timeframe(data: Dict[str, Dict]) -> Tuple[arrow.Arrow, arrow.Arrow]:
+def get_timeframe(data: Dict[str, DataFrame]) -> Tuple[arrow.Arrow, arrow.Arrow]:
     """
     Get the maximum timeframe for the given backtest data
-    :param data: dictionary with backtesting data
+    :param data: dictionary with preprocessed backtesting data
     :return: tuple containing min_date, max_date
     """
-    min_date, max_date = None, None
-    for values in data.values():
-        sorted_values = sorted(values, key=lambda d: arrow.get(d['T']))
-        if not min_date or sorted_values[0]['T'] < min_date:
-            min_date = sorted_values[0]['T']
-        if not max_date or sorted_values[-1]['T'] > max_date:
-            max_date = sorted_values[-1]['T']
-    return arrow.get(min_date), arrow.get(max_date)
+    all_dates = Series([])
+    for pair, pair_data in data.items():
+        all_dates = all_dates.append(pair_data['date'])
+    all_dates.sort_values(inplace=True)
+    return arrow.get(all_dates.iloc[0]), arrow.get(all_dates.iloc[-1])
 
 
 def generate_text_table(
@@ -41,31 +39,38 @@ def generate_text_table(
     Generates and returns a text table for the given backtest data and the results dataframe
     :return: pretty printed table with tabulate as str
     """
+    floatfmt = ('s', 'd', '.2f', '.8f', '.1f')
     tabular_data = []
-    headers = ['pair', 'buy count', 'avg profit', 'total profit', 'avg duration']
+    headers = ['pair', 'buy count', 'avg profit %',
+               'total profit ' + stake_currency, 'avg duration', 'profit', 'loss']
     for pair in data:
         result = results[results.currency == pair]
         tabular_data.append([
             pair,
             len(result.index),
-            '{:.2f}%'.format(result.profit_percent.mean() * 100.0),
-            '{:.08f} {}'.format(result.profit_BTC.sum(), stake_currency),
-            '{:.2f}'.format(result.duration.mean() * ticker_interval),
+            result.profit_percent.mean() * 100.0,
+            result.profit_BTC.sum(),
+            result.duration.mean() * ticker_interval,
+            result.profit.sum(),
+            result.loss.sum()
         ])
 
     # Append Total
     tabular_data.append([
         'TOTAL',
         len(results.index),
-        '{:.2f}%'.format(results.profit_percent.mean() * 100.0),
-        '{:.08f} {}'.format(results.profit_BTC.sum(), stake_currency),
-        '{:.2f}'.format(results.duration.mean() * ticker_interval),
+        results.profit_percent.mean() * 100.0,
+        results.profit_BTC.sum(),
+        results.duration.mean() * ticker_interval,
+        results.profit.sum(),
+        results.loss.sum()
     ])
-    return tabulate(tabular_data, headers=headers)
+    return tabulate(tabular_data, headers=headers, floatfmt=floatfmt)
 
 
 def backtest(stake_amount: float, processed: Dict[str, DataFrame],
-             max_open_trades: int = 0, realistic: bool = True) -> DataFrame:
+             max_open_trades: int = 0, realistic: bool = True, sell_profit_only: bool = False,
+             stoploss: int = -1.00, use_sell_signal: bool = False) -> DataFrame:
     """
     Implements backtesting functionality
     :param stake_amount: btc amount to use for each trade
@@ -82,7 +87,8 @@ def backtest(stake_amount: float, processed: Dict[str, DataFrame],
         ticker = populate_sell_trend(populate_buy_trend(pair_data))
         # for each buy point
         lock_pair_until = None
-        for row in ticker[ticker.buy == 1].itertuples(index=True):
+        buy_subset = ticker[ticker.buy == 1][['buy', 'open', 'close', 'date', 'sell']]
+        for row in buy_subset.itertuples(index=True):
             if realistic:
                 if lock_pair_until is not None and row.Index <= lock_pair_until:
                     continue
@@ -104,26 +110,33 @@ def backtest(stake_amount: float, processed: Dict[str, DataFrame],
             )
 
             # calculate win/lose forwards from buy point
-            for row2 in ticker[row.Index + 1:].itertuples(index=True):
+            sell_subset = ticker[row.Index + 1:][['close', 'date', 'sell']]
+            for row2 in sell_subset.itertuples(index=True):
                 if max_open_trades > 0:
                     # Increase trade_count_lock for every iteration
                     trade_count_lock[row2.date] = trade_count_lock.get(row2.date, 0) + 1
 
-                if min_roi_reached(trade, row2.close, row2.date) or row2.sell == 1:
-                    current_profit_percent = trade.calc_profit_percent(rate=row2.close)
-                    current_profit_BTC = trade.calc_profit(rate=row2.close)
-                    lock_pair_until = row2.Index
+                current_profit_percent = trade.calc_profit_percent(rate=row2.close)
+                if (sell_profit_only and current_profit_percent < 0):
+                    continue
+                if min_roi_reached(trade, row2.close, row2.date) or \
+                    (row2.sell == 1 and use_sell_signal) or \
+                        current_profit_percent <= stoploss:
+                        current_profit_btc = trade.calc_profit(rate=row2.close)
+                        lock_pair_until = row2.Index
 
-                    trades.append(
-                        (
-                            pair,
-                            current_profit_percent,
-                            current_profit_BTC,
-                            row2.Index - row.Index
+                        trades.append(
+                            (
+                                pair,
+                                current_profit_percent,
+                                current_profit_btc,
+                                row2.Index - row.Index,
+                                current_profit_btc > 0,
+                                current_profit_btc < 0
+                            )
                         )
-                    )
-                    break
-    labels = ['currency', 'profit_percent', 'profit_BTC', 'duration']
+                        break
+    labels = ['currency', 'profit_percent', 'profit_BTC', 'duration', 'profit', 'loss']
     return DataFrame.from_records(trades, columns=labels)
 
 
@@ -137,7 +150,7 @@ def start(args):
     exchange._API = Bittrex({'key': '', 'secret': ''})
 
     logger.info('Using config: %s ...', args.config)
-    config = load_config(args.config)
+    config = misc.load_config(args.config)
 
     logger.info('Using ticker_interval: %s ...', args.ticker_interval)
 
@@ -149,15 +162,11 @@ def start(args):
             data[pair] = exchange.get_ticker_history(pair, args.ticker_interval)
     else:
         logger.info('Using local backtesting data (using whitelist in given config) ...')
-        data = load_data(pairs=pairs, ticker_interval=args.ticker_interval,
-                         refresh_pairs=args.refresh_pairs)
+        data = optimize.load_data(pairs=pairs, ticker_interval=args.ticker_interval,
+                                  refresh_pairs=args.refresh_pairs)
 
         logger.info('Using stake_currency: %s ...', config['stake_currency'])
         logger.info('Using stake_amount: %s ...', config['stake_amount'])
-
-    # Print timeframe
-    min_date, max_date = get_timeframe(data)
-    logger.info('Measuring data from %s up to %s ...', min_date.isoformat(), max_date.isoformat())
 
     max_open_trades = 0
     if args.realistic_simulation:
@@ -168,11 +177,22 @@ def start(args):
     from freqtrade import main
     main._CONF = config
 
+    preprocessed = preprocess(data)
+    # Print timeframe
+    min_date, max_date = get_timeframe(preprocessed)
+    logger.info('Measuring data from %s up to %s ...', min_date.isoformat(), max_date.isoformat())
+
     # Execute backtest and print results
     results = backtest(
-        config['stake_amount'], preprocess(data), max_open_trades, args.realistic_simulation
+        stake_amount=config['stake_amount'],
+        processed=preprocessed,
+        max_open_trades=max_open_trades,
+        realistic=args.realistic_simulation,
+        sell_profit_only=config.get('experimental', {}).get('sell_profit_only', False),
+        stoploss=config.get('stoploss'),
+        use_sell_signal=config.get('experimental', {}).get('use_sell_signal', False)
     )
     logger.info(
-        '\n====================== BACKTESTING REPORT ======================================\n%s',
+        '\n==================================== BACKTESTING REPORT ====================================\n%s', # noqa
         generate_text_table(data, results, config['stake_currency'], args.ticker_interval)
     )

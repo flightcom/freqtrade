@@ -11,6 +11,7 @@
         "0":  0.04
     },
     "stoploss": -0.10,
+    "unfilledtimeout": 600,
     "bid_strategy": {
         "ask_last_balance": 0.0
     },
@@ -29,10 +30,14 @@
             "BTC_POWR",
             "BTC_ADA",
             "BTC_XMR"
+        ],
+        "pair_blacklist": [
+            "BTC_DOGE"
         ]
     },
     "experimental": {
-        "use_sell_signal": false
+        "use_sell_signal": false,
+        "sell_profit_only": false
     },
     "telegram": {
         "enabled": true,

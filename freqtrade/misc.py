@@ -158,6 +158,14 @@ def parse_args(args: List[str], description: str):
         metavar='INT',
         nargs='?',
     )
+    parser.add_argument(
+        '-i', '--ticker-interval',
+        help='specify ticker interval in minutes (default: 5)',
+        dest='ticker_interval',
+        default=5,
+        type=int,
+        metavar='INT',
+    )
 
     build_subcommands(parser)
     return parser.parse_args(args)

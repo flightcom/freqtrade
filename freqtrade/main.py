@@ -377,6 +377,8 @@ def create_trade(stake_amount: float, interval: int) -> bool:
     if not whitelist:
         raise DependencyException('No pair in whitelist')
 
+    ticker_interval = _CONF['internals']['ticker_interval']
+
     # Pick pair based on StochRSI buy signals
     for _pair in whitelist:
         (buy, sell) = get_signal(_pair, interval)

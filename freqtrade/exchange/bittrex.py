@@ -142,6 +142,8 @@ class Bittrex(Exchange):
             interval = 'oneMin'
         elif tick_interval == 5:
             interval = 'fiveMin'
+        elif tick_interval == 15:
+            interval = 'fifteenMin'
         elif tick_interval == 30:
             interval = 'thirtyMin'
         elif tick_interval == 60:

@@ -413,7 +413,8 @@ def optimizer(params):
         print('.', end='')
         return {
             'status': STATUS_FAIL,
-            'loss': float('inf')
+            'loss': float('inf'),
+            'total_profit': total_profit
         }
 
     loss = calculate_loss(total_profit, trade_count, trade_duration)
@@ -431,6 +432,7 @@ def optimizer(params):
         'loss': trade_loss + profit_loss,
         'total_profit': total_profit,
         'status': STATUS_OK,
+        'total_profit': total_profit,
         'result': result_explanation,
     }
 

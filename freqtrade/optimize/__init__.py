@@ -76,7 +76,7 @@ def download_pairs(pairs: List[str]) -> bool:
     """For each pairs passed in parameters, download 1 and 5 ticker intervals"""
     for pair in pairs:
         try:
-            for interval in [1, 5]:
+            for interval in [1, 5, 30]:
                 download_backtesting_testdata(pair=pair, interval=interval)
         except BaseException:
             logger.info('Failed to download the pair: "{pair}", Interval: {interval} min'.format(

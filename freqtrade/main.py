@@ -253,6 +253,8 @@ def handle_trade(trade: Trade) -> bool:
         execute_sell(trade, current_rate)
         return True
 
+    ticker_interval = _CONF['internals']['ticker_interval']
+
     # Experimental: Check if sell signal has been enabled and triggered
     if _CONF.get('experimental', {}).get('use_sell_signal'):
         # Experimental: Check if the trade is profitable before selling it (avoid selling at loss)
@@ -261,7 +263,7 @@ def handle_trade(trade: Trade) -> bool:
             if trade.calc_profit(rate=current_rate) <= 0:
                 return False
         logger.debug('Checking sell_signal ...')
-        if get_signal(trade.pair, SignalType.SELL):
+        if get_signal(trade.pair, SignalType.SELL, ticker_interval):
             logger.debug('Executing sell due to sell signal ...')
             execute_sell(trade, current_rate)
             return True
@@ -302,6 +304,8 @@ def create_trade(stake_amount: float) -> bool:
             logger.debug('Ignoring %s in pair whitelist', trade.pair)
     if not whitelist:
         raise DependencyException('No pair in whitelist')
+
+    ticker_interval = _CONF['internals']['ticker_interval']
 
     # Pick pair based on StochRSI buy signals
     for _pair in whitelist:

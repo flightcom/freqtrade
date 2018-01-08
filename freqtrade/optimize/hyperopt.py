@@ -4,6 +4,7 @@
 import json
 import logging
 import sys
+import numpy as np
 from functools import reduce
 from math import exp
 from operator import itemgetter
@@ -26,14 +27,15 @@ logging.getLogger('hyperopt.tpe').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 # set TARGET_TRADES to suit your number concurrent trades so its realistic to 20days of data
-TARGET_TRADES = 1100
+TARGET_TRADES = 600
 TOTAL_TRIES = None
 _CURRENT_TRIES = 0
 CURRENT_BEST_LOSS = 100
 
 # this is expexted avg profit * expected trade count
 # for example 3.5%, 1100 trades, EXPECTED_MAX_PROFIT = 3.85
-EXPECTED_MAX_PROFIT = 3.85
+# EXPECTED_MAX_PROFIT = TARGET_TRADES * 0.0025
+EXPECTED_MAX_PROFIT = TARGET_TRADES * 0.05
 
 # Configuration and data used by hyperopt
 PROCESSED = optimize.preprocess(optimize.load_data())
@@ -111,7 +113,7 @@ def log_results(results):
 
 def calculate_loss(total_profit: float, trade_count: int):
     """ objective function, returns smaller number for more optimal results """
-    trade_loss = 1 - 0.35 * exp(-(trade_count - TARGET_TRADES) ** 2 / 10 ** 5.2)
+    trade_loss = (1 - 0.35 * exp(-(trade_count - TARGET_TRADES) ** 2 / 10 ** 5.2)) * 0.1
     profit_loss = max(0, 1 - total_profit / EXPECTED_MAX_PROFIT)
     return trade_loss + profit_loss
 
@@ -132,7 +134,8 @@ def optimizer(params):
         print('.', end='')
         return {
             'status': STATUS_FAIL,
-            'loss': float('inf')
+            'loss': float('inf'),
+            'total_profit': total_profit
         }
 
     loss = calculate_loss(total_profit, trade_count)
@@ -149,6 +152,7 @@ def optimizer(params):
     return {
         'loss': loss,
         'status': STATUS_OK,
+        'total_profit': total_profit,
         'result': result_explanation,
     }
 
@@ -227,7 +231,7 @@ def start(args):
     config = load_config(args.config)
     pairs = config['exchange']['pair_whitelist']
     PROCESSED = optimize.preprocess(optimize.load_data(
-        pairs=pairs, ticker_interval=args.ticker_interval))
+        pairs=pairs, ticker_interval=config['internals']['ticker_interval']))
 
     if args.mongodb:
         logger.info('Using mongodb ...')
@@ -247,7 +251,7 @@ def start(args):
     logger.info('Best parameters:\n%s', json.dumps(best, indent=4))
 
     filt_res = filter_nan(trials.results, 'total_profit')
-    filt_res = filter_nan(filt_res, 'avg_profit')
+    # filt_res = filter_nan(filt_res, 'avg_profit')
 
     results = sorted(filt_res, key=itemgetter('loss'))
 

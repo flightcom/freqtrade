@@ -11,31 +11,23 @@ def hyperopt_optimize_conf() -> dict:
     :return:
     """
     return {
-        'max_open_trades': 3,
+        'max_open_trades': 30,
         'stake_currency': 'BTC',
-        'stake_amount': 0.01,
+        'stake_amount': 1,
         "minimal_roi": {
-            '40':  0.0,
-            '30':  0.01,
-            '20':  0.02,
-            '0':  0.04,
+            # '1440':  -0.05,
+            # '720':  0,
+            '60':  -1,
+            # '120':  0.02,
+            # '60':  0.03,
+            '0':  0.05,
         },
-        'stoploss': -0.10,
+        'stoploss': -1,
         "bid_strategy": {
             "ask_last_balance": 0.0
         },
         "exchange": {
             "pair_whitelist": [
-                "BTC_ETH",
-                "BTC_LTC",
-                "BTC_ETC",
-                "BTC_DASH",
-                "BTC_ZEC",
-                "BTC_XLM",
-                "BTC_NXT",
-                "BTC_POWR",
-                "BTC_ADA",
-                "BTC_XMR"
             ]
         }
     }

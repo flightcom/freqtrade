@@ -130,7 +130,7 @@ def populate_indicators(dataframe: DataFrame) -> DataFrame:
     dataframe['sar'] = ta.SAR(dataframe)
 
     # SMA - Simple Moving Average
-    dataframe['sma'] = ta.SMA(dataframe, timeperiod=40)
+    dataframe['sma'] = ta.SMA(dataframe, timeperiod=5)
 
     # TEMA - Triple Exponential Moving Average
     dataframe['tema'] = ta.TEMA(dataframe, timeperiod=9)
@@ -228,16 +228,26 @@ def populate_buy_trend(dataframe: DataFrame) -> DataFrame:
     :param dataframe: DataFrame
     :return: DataFrame with buy column
     """
+    prevsma = dataframe['sma'].shift(1)
+
     dataframe.loc[
         (
-            (dataframe['rsi'] < 35) &
-            (dataframe['fastd'] < 35) &
-            (dataframe['adx'] > 30) &
-            (dataframe['plus_di'] > 0.5)
-        ) |
-        (
-            (dataframe['adx'] > 65) &
-            (dataframe['plus_di'] > 0.5)
+#            (dataframe['adx'] > 17) &                                  # ADX
+            (dataframe['fastd'] < 49) &                                # FASTD
+#            (dataframe['mfi'] < 13) &                                  # MFI
+            (dataframe['rsi'] < 36) &                                  # RSI
+#            (dataframe['close'] > dataframe['sar']) &                  # Over SAR
+#            (dataframe['close'] > dataframe['open']) &                 # Green Candle
+#            (dataframe['ema5'] > dataframe['ema10']) &                 # UPTREND SHORT EMA
+#            (dataframe['ema50'] > dataframe['ema100']) &               # UPTREND LONG EMA
+#            (dataframe['sma'] > prevsma) &                             # UPTREND SMA
+           (dataframe['tema'] <= dataframe['blower'])                 # TRIGGER 0 LOWER BB
+#            (crossed_above(dataframe['close'], dataframe['sar']))      # TRIGGER 5 SAR REVERSAL
+#           (qtpylib.crossed_above(dataframe['fastk'], dataframe['fastd']))    # TRIGGER 6 STOCHF
+        # ) |
+        # (
+        #     (dataframe['adx'] > 65) &
+        #     (dataframe['plus_di'] > 0.5)
         ),
         'buy'] = 1
 

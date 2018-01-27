@@ -202,9 +202,13 @@ class DefaultStrategy(IStrategy):
         """
         dataframe.loc[
             (
+                # (dataframe['adx'] > 19) &
+                # (dataframe['ema5'] > dataframe['ema10']) &
+                # (dataframe['ema50'] > dataframe['ema100']) &
+                # (qtpylib.crossed_above(dataframe['close'], dataframe['sar']))
                 (dataframe['rsi'] < 35) &
                 (dataframe['fastd'] < 35) &
-                (dataframe['adx'] > 30) &
+                (dataframe['adx'] > 19) &
                 (dataframe['plus_di'] > 0.5)
             ) |
             (

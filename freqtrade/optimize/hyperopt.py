@@ -7,7 +7,6 @@ import os
 import pickle
 import signal
 import sys
-import numpy as np
 from functools import reduce
 from math import exp
 from operator import itemgetter
@@ -37,14 +36,14 @@ logging.getLogger('hyperopt.tpe').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 # set TARGET_TRADES to suit your number concurrent trades so its realistic to the number of days
-TARGET_TRADES = 600
+TARGET_TRADES = 800
 TOTAL_TRIES = 0
 _CURRENT_TRIES = 0
 CURRENT_BEST_LOSS = 100
 
 # max average trade duration in minutes
 # if eval ends with higher value, we consider it a failed eval
-MAX_ACCEPTED_TRADE_DURATION = 300
+MAX_ACCEPTED_TRADE_DURATION = 1440
 
 # this is expexted avg profit * expected trade count
 # for example 3.5%, 1100 trades, EXPECTED_MAX_PROFIT = 3.85
@@ -413,8 +412,7 @@ def optimizer(params):
         print('.', end='')
         return {
             'status': STATUS_FAIL,
-            'loss': float('inf'),
-            'total_profit': total_profit
+            'loss': float('inf')
         }
 
     loss = calculate_loss(total_profit, trade_count, trade_duration)
@@ -429,10 +427,8 @@ def optimizer(params):
     })
 
     return {
-        'loss': trade_loss + profit_loss,
-        'total_profit': total_profit,
+        'loss': loss,
         'status': STATUS_OK,
-        'total_profit': total_profit,
         'result': result_explanation,
     }
 

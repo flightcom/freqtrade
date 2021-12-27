@@ -1,0 +1,36 @@
+{
+  "strategy_name": "Strategy005",
+  "params": {
+    "roi": {
+      "0": 0.05,
+      "20": 0.04,
+      "40": 0.03,
+      "80": 0.02,
+      "1440": 0.01
+    },
+    "stoploss": {
+      "stoploss": -0.1
+    },
+    "trailing": {
+      "trailing_stop": false,
+      "trailing_stop_positive": 0.01,
+      "trailing_stop_positive_offset": 0.02,
+      "trailing_only_offset_is_reached": false
+    },
+    "buy": {
+      "buy_fastd": 99,
+      "buy_fishRsiNorma": 16,
+      "buy_rsi": 16,
+      "buy_volumeAVG": 281
+    },
+    "sell": {
+      "sell_fishRsiNorma": 23,
+      "sell_minusDI": 77,
+      "sell_rsi": 59,
+      "sell_trigger": "sar-fisherRsi"
+    },
+    "protection": {}
+  },
+  "ft_stratparam_v": 1,
+  "export_time": "2021-12-19 19:19:53.781144+00:00"
+}

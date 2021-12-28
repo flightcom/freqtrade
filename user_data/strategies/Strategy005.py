@@ -25,11 +25,15 @@ class Strategy005(IStrategy):
     # Minimal ROI designed for the strategy.
     # This attribute will be overridden if the config file contains "minimal_roi"
     minimal_roi = {
-        "1440": 0.01,
-        "80": 0.02,
-        "40": 0.03,
-        "20": 0.04,
-        "0":  0.05
+        "0": 0.154,
+        "15": 0.084,
+        "67": 0.028,
+        "125": 0
+        # "1440": 0.01,
+        # "80": 0.02,
+        # "40": 0.03,
+        # "20": 0.04,
+        # "0":  0.05
     }
 
     # Optimal stoploss designed for the strategy
@@ -73,17 +77,25 @@ class Strategy005(IStrategy):
 
     # Buy hyperspace params:
     buy_params = {
-        "buy_fastd": 1,
-        "buy_fishRsiNorma": 5,
-        "buy_rsi": 26,
-        "buy_volumeAVG": 150,
+        # "buy_fastd": 1,
+        # "buy_fishRsiNorma": 5,
+        # "buy_rsi": 26,
+        # "buy_volumeAVG": 150,
+        "buy_fastd": 92,
+        "buy_fishRsiNorma": 39,
+        "buy_rsi": 37,
+        "buy_volumeAVG": 185,
     }
 
     # Sell hyperspace params:
     sell_params = {
-        "sell_fishRsiNorma": 30,
-        "sell_minusDI": 4,
-        "sell_rsi": 74,
+        # "sell_fishRsiNorma": 30,
+        # "sell_minusDI": 4,
+        # "sell_rsi": 74,
+        # "sell_trigger": "rsi-macd-minusdi",
+        "sell_fishRsiNorma": 63,
+        "sell_minusDI": 35,
+        "sell_rsi": 41,
         "sell_trigger": "rsi-macd-minusdi",
     }
 

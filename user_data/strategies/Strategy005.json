@@ -1,13 +1,6 @@
 {
   "strategy_name": "Strategy005",
   "params": {
-    "roi": {
-      "0": 0.05,
-      "20": 0.04,
-      "40": 0.03,
-      "80": 0.02,
-      "1440": 0.01
-    },
     "stoploss": {
       "stoploss": -0.1
     },
@@ -18,19 +11,25 @@
       "trailing_only_offset_is_reached": false
     },
     "buy": {
-      "buy_fastd": 99,
-      "buy_fishRsiNorma": 16,
-      "buy_rsi": 16,
-      "buy_volumeAVG": 281
+      "buy_fastd": 92,
+      "buy_fishRsiNorma": 39,
+      "buy_rsi": 37,
+      "buy_volumeAVG": 185
     },
     "sell": {
-      "sell_fishRsiNorma": 23,
-      "sell_minusDI": 77,
-      "sell_rsi": 59,
-      "sell_trigger": "sar-fisherRsi"
+      "sell_fishRsiNorma": 63,
+      "sell_minusDI": 35,
+      "sell_rsi": 41,
+      "sell_trigger": "rsi-macd-minusdi"
     },
-    "protection": {}
+    "protection": {},
+    "roi": {
+      "0": 0.15400000000000003,
+      "15": 0.084,
+      "67": 0.028,
+      "125": 0
+    }
   },
   "ft_stratparam_v": 1,
-  "export_time": "2021-12-19 19:19:53.781144+00:00"
+  "export_time": "2021-12-28 11:21:54.336242+00:00"
 }
